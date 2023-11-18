@@ -2,13 +2,12 @@ import "./App.scss";
 
 import { Component, createSignal } from "solid-js";
 
-const MODES = ["small", "large"] as const;
+const MODES = ["large"] as const;
 
 type Mode = typeof MODES[number];
 
 const DEFAULT_VALUES = {
-  large: Math.pow(2, 53).toString(),
-  small: "50000"
+  large: Math.pow(2, 53).toString()
 };
 
 type Operator = "+" | "-" | "*" | "/";
@@ -35,9 +34,9 @@ const OPERATORS: Record<Operator, (a: string, b: string) => string> = {
 };
 
 const App: Component = () => {
-  const [mode, setMode] = createSignal<Mode>(MODES[0]);
-  const [operand1, setOperand1] = createSignal(DEFAULT_VALUES[mode()] || "");
-  const [operator, setOperator] = createSignal<Operator>(null);
+  const [mode, setMode] = createSignal<Mode | null>(null);
+  const [operand1, setOperand1] = createSignal("");
+  const [operator, setOperator] = createSignal<Operator | null>(null);
   const [operand2, setOperand2] = createSignal<string>("");
   
   const changeMode = (mode: Mode) => {
@@ -53,7 +52,7 @@ const App: Component = () => {
 
   const changeOperator = (op: Operator) => {
     if (operand1() && operator() && operand2()) {
-      setOperand1(OPERATORS[operator()](operand1(), operand2()));
+      setOperand1(OPERATORS[operator() as Operator](operand1(), operand2()));
       setOperand2("");
     }
 
@@ -79,7 +78,7 @@ const App: Component = () => {
 
   const calculate = () => {
     if (operator() && operand2()) {
-      setOperand1(OPERATORS[operator()](operand1(), operand2()));
+      setOperand1(OPERATORS[operator() as Operator](operand1(), operand2()));
     }
     setOperator(null);
     setOperand2("");
@@ -114,8 +113,7 @@ const App: Component = () => {
         <button class="calculator-op" onClick={calculate}>=</button>
       </main>
       <header>
-        <button classList={{"btn-data-selector": true, "btn-selected": mode() === MODES[0]}} onClick={[changeMode, MODES[0]]}>Small data</button>
-        <button classList={{"btn-data-selector": true, "btn-selected": mode() === MODES[1]}} onClick={[changeMode, MODES[1]]}>Large data</button>
+        <button classList={{"btn-data-selector": true, "btn-selected": mode() === MODES[0]}} onClick={[changeMode, MODES[0]]}>Large number</button>
       </header>
     </>
   );
