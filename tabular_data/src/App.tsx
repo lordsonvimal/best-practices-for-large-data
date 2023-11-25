@@ -1,6 +1,19 @@
 import "./App.scss";
 
-import { Component, createEffect, createSignal } from "solid-js";
+import { Component, createEffect, createSignal, For } from "solid-js";
+
+type User = {
+  email: string,
+  id: number,
+  first_name: string,
+  last_name: string,
+  phone: string,
+  sex: string
+};
+
+type ResponseJson = {
+  users: User[]
+}
 
 const RECORDS_URL = {
   "1K": "http://localhost:1324/get_1k_records",
@@ -9,12 +22,16 @@ const RECORDS_URL = {
 };
 
 const App: Component = () => {
-  const [records, setRecords] = createSignal([]);
+  const [records, setRecords] = createSignal<User[]>([]);
   const [context, setContext] = createSignal<keyof typeof RECORDS_URL>("1K");
 
   const fetchRecords = async (count: keyof typeof RECORDS_URL) => {
-    const response = await fetch(RECORDS_URL[count]);
-    setRecords(await response.json());
+    try {
+      const response = await fetch(RECORDS_URL[count]);
+      const responseJson = await response.json() as ResponseJson;
+      
+      setRecords(responseJson.users);
+    } catch(e) {}
   };
 
   createEffect(() => {
@@ -33,7 +50,17 @@ const App: Component = () => {
           <button classList={{ "btn": true, "btn-selected": context() === "10K" }} onClick={[changeContext, "10K"]}>10K records</button>
           <button classList={{ "btn": true, "btn-selected": context() === "2M" }} onClick={[changeContext, "2M"]}>2M records</button>
         </div>
-        <div></div>
+        <div class="users-container">
+          <For each={records()}>
+            {item => (
+              <div class="user-card">
+                <div class="user-icon"></div>
+                {/* email and first name are swapped in DB */}
+                <div>{item.email} {item.last_name}</div>
+              </div>
+            )}
+          </For>
+        </div>
       </main>
     </>
   );

@@ -1,16 +1,19 @@
 // Tabular data specific styles
 main {
   display: grid;
+  grid-template-columns: minmax(500px, 800px);
   grid-template-rows: 50px 1fr;
   gap: 8px;
   height: 100%;
   justify-content: center;
+  overflow: hidden;
   padding: 8px;
 }
 
 .btn-group {
   display: flex;
   gap: 8px;
+  justify-content: center;
 }
 
 .btn {
@@ -35,4 +38,24 @@ main {
   background-color: #3173D8;
   border-color: #3173D8;
   color: white;
+}
+
+.users-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  overflow: auto;
+  padding: 8px;
+  width: 100%;
+}
+
+.user-card {
+  // border-radius: 5px;
+  box-shadow: 0 1px 5px 0 rgba(128, 128, 128, 0.3);
+  color: #575f64;
+  max-height: 80px;
+  min-height: 80px;
+  overflow: hidden;
+  padding: 8px;
 }
