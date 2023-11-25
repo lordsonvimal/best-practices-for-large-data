@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 
@@ -10,11 +10,19 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func upload(c echo.Context) error {
-	// Read form fields
-	name := c.FormValue("name")
-	email := c.FormValue("email")
+type MessageResponse struct {
+	Msg string `json:"msg" xml:"msg"`
+}
 
+func hello(c echo.Context) error {
+	msg := MessageResponse{
+		Msg: "test",
+	}
+	return c.JSON(http.StatusOK, &msg)
+}
+
+func upload(c echo.Context) error {
+	c.Response().Writer.Header().Set("Access-Control-Allow_origin", "*")
 	//-----------
 	// Read file
 	//-----------
@@ -42,17 +50,24 @@ func upload(c echo.Context) error {
 		return err
 	}
 
-	return c.HTML(http.StatusOK, fmt.Sprintf("<p>File %s uploaded successfully with fields name=%s and email=%s.</p>", file.Filename, name, email))
+	r := MessageResponse{
+		Msg: "Successfully uploaded file",
+	}
+
+	log.Println("sending json")
+	return c.JSON(http.StatusOK, r)
 }
 
 func main() {
 	e := echo.New()
 
+	e.Use(middleware.CORS())
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.GzipWithConfig(middleware.DefaultGzipConfig))
 
-	e.Static("/", "public")
 	e.POST("/upload", upload)
+	e.GET("/hello", hello)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
