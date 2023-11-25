@@ -1,0 +1,27 @@
+{
+  "name": "calculator",
+  "version": "1.0.0",
+  "description": "Calculator app for adding",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "keywords": [],
+  "author": "Lordson Vimal",
+  "license": "ISC",
+  "dependencies": {
+    "csv": "^6.3.5",
+    "lodash-es": "^4.17.21",
+    "solid-js": "^1.8.5"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12",
+    "sass": "^1.69.5",
+    "solid-devtools": "^0.29.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vite-plugin-solid": "^2.7.2"
+  }
+}
