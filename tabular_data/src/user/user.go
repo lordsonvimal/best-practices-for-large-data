@@ -15,7 +15,7 @@ import (
 // 	UpdatedAt   time.Time `json:"updated_at"`
 // 	FirstName   string    `json:"first_name" csv:"First Name"` // .csv column headers
 // 	LastName    string    `json:"last_name" csv:"Last Name"`
-// 	Sex         string    `json:"sex" csv:"Sex"`
+// 	Sex         string    `json:"gender" csv:"Sex"`
 // 	Email       string    `json:"email" csv:"Email"`
 // 	Phone       string    `json:"phone" csv:"Phone"`
 // 	DateOfBirth string    `json:"dob" csv:"Date of birth"`
@@ -28,7 +28,7 @@ type User struct {
 	UpdatedAt   time.Time `json:"-"`
 	FirstName   string    `json:"first_name" csv:"First Name"` // .csv column headers
 	LastName    string    `json:"last_name" csv:"Last Name"`
-	Sex         string    `json:"sex" csv:"Sex"`
+	Sex         string    `json:"-" csv:"Sex"`
 	Email       string    `json:"email" csv:"Email"`
 	Phone       string    `json:"-" csv:"Phone"`
 	DateOfBirth string    `json:"-" csv:"Date of birth"`
@@ -41,7 +41,7 @@ type Users struct {
 
 func CreateUsers(users []*User) ([]*User, error) {
 	db := db.GetDB()
-	sqlStatement := `INSERT INTO user_2m (first_name, last_name, sex, email, phone, date_of_birth, job_title, created_at, updated_at) VALUES `
+	sqlStatement := `INSERT INTO user_100k (first_name, last_name, sex, email, phone, date_of_birth, job_title, created_at, updated_at) VALUES `
 	vals := []interface{}{}
 
 	columns := 9
@@ -132,13 +132,17 @@ func Create10KUsers() {
 	CreateRecordsFromCSV("../../assets/people-10000.csv")
 }
 
+func Create100KUsers() {
+	CreateRecordsFromCSV("../assets/people-100000.csv")
+}
+
 func GetUsers(table string) (Users, error) {
 	// sqlStatement := "SELECT * FROM " + table
-	sqlStatement := "SELECT email, first_name, last_name, job_title, sex FROM " + table
+	sqlStatement := "SELECT email, first_name, last_name, job_title FROM " + table
 	db := db.GetDB()
 	rows, err := db.Query(sqlStatement)
 	if err != nil {
-		fmt.Println(err)
+		return Users{}, err
 	}
 	defer rows.Close()
 	result := Users{}
@@ -146,7 +150,7 @@ func GetUsers(table string) (Users, error) {
 	for rows.Next() {
 		user := User{}
 		// err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateOfBirth, &user.Phone, &user.Sex, &user.JobTitle, &user.CreatedAt, &user.UpdatedAt)
-		err := rows.Scan(&user.FirstName, &user.LastName, &user.Email, &user.Sex, &user.JobTitle)
+		err := rows.Scan(&user.FirstName, &user.LastName, &user.Email, &user.JobTitle)
 
 		if err != nil {
 			return Users{}, err
@@ -168,4 +172,8 @@ func GetUsers10K() (Users, error) {
 
 func GetUsers2M() (Users, error) {
 	return GetUsers("user_2m")
+}
+
+func GetUsers100K() (Users, error) {
+	return GetUsers("user_100k")
 }

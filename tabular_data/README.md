@@ -1,6 +1,6 @@
-# File upload
+# Tabular Data
 
-Applications having file upload feature need to consider file size
+Applications with tabular listing can face a lot of problems when data scales
 
 ### Problem
-Uploading small sized file works but large sized files could not be uploaded
+

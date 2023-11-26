@@ -1,8 +1,9 @@
 // Tabular data specific styles
 main {
+  // background-color: #fcfdfe;
   display: grid;
   grid-template-columns: minmax(500px, 800px);
-  grid-template-rows: 50px 1fr;
+  grid-template-rows: 35px 1fr 50px;
   gap: 8px;
   height: 100%;
   justify-content: center;
@@ -52,10 +53,58 @@ main {
 
 .user-card {
   // border-radius: 5px;
-  box-shadow: 0 1px 5px 0 rgba(128, 128, 128, 0.3);
+  background-color: white;
+  box-shadow: 0 1px 5px 0 rgba(205, 205, 205, 0.3);
   color: #575f64;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
   max-height: 80px;
   min-height: 80px;
   overflow: hidden;
   padding: 8px;
+
+  &:hover {
+    background-color: #f5f7f8;
+  }
+}
+
+.user-info {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.user-email {
+  color: #747779;
+  font-size: 12px;
+}
+
+.user-job {
+  color: #8d939c;
+  flex: 1;
+  font-size: 12px;
+}
+
+.list-toolbar {
+  align-items: center;
+  color: #575f64;
+  display: flex;
+  font-size: 13px;
+  justify-content: space-between;
+}
+
+input {
+  border: 1px solid #e8eaec;
+  height: 35px;
+  padding: 8px;
+  width: 250px;
+
+  &:focus,
+  &:focus-visible {
+    border: 1px solid #3173D8;
+    border-radius: 0;
+    outline-style: solid;
+  }
 }

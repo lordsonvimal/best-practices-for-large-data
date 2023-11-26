@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -18,8 +17,7 @@ func get_1k_records(c echo.Context) error {
 	res, err := user.GetUsers1K()
 
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return c.JSON(http.StatusInternalServerError, &MessageResponse{Msg: err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -29,8 +27,17 @@ func get_10k_records(c echo.Context) error {
 	res, err := user.GetUsers10K()
 
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return c.JSON(http.StatusInternalServerError, &MessageResponse{Msg: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
+func get_100k_records(c echo.Context) error {
+	res, err := user.GetUsers100K()
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, &MessageResponse{Msg: err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -40,7 +47,7 @@ func get_2m_records(c echo.Context) error {
 	res, err := user.GetUsers2M()
 
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, &MessageResponse{Msg: err.Error()})
 	}
 
 	return c.JSON(http.StatusOK, res)
@@ -56,6 +63,7 @@ func main() {
 
 	e.GET("/get_1k_records", get_1k_records)
 	e.GET("/get_10k_records", get_10k_records)
+	e.GET("/get_100k_records", get_100k_records)
 	e.GET("/get_2m_records", get_2m_records)
 
 	db.InitDB()
