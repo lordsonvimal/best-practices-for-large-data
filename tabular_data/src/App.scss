@@ -3,7 +3,7 @@ main {
   // background-color: #fcfdfe;
   display: grid;
   grid-template-columns: minmax(500px, 800px);
-  grid-template-rows: 35px 1fr 50px;
+  grid-template-rows: 35px 35px 1fr 50px;
   gap: 8px;
   height: 100%;
   justify-content: center;
@@ -12,12 +12,14 @@ main {
 }
 
 .btn-group {
+  align-items: center;
   display: flex;
   gap: 8px;
   justify-content: center;
 }
 
-.btn {
+.btn,
+.btn-paginate {
   background-color: #f5f7f8;
   border-radius: 0;
   border: 1px solid #e7eaec;
@@ -33,6 +35,17 @@ main {
     border-color: #3173D8;
     color: white;
   }
+
+  &:disabled {
+    color: #b6b6b6;
+
+    &:hover {
+      background-color: #f5f7f8;
+      border-color: #e7eaec;
+      color: #b6b6b6;
+      cursor: not-allowed;
+    }
+  }
 }
 
 .btn-selected {
@@ -41,13 +54,17 @@ main {
   color: white;
 }
 
+.btn-paginate {
+  padding: 4px;
+}
+
 .users-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
   height: 100%;
   overflow: auto;
-  padding: 8px;
+  padding: 8px 4px;
   width: 100%;
 }
 
@@ -93,6 +110,24 @@ main {
   display: flex;
   font-size: 13px;
   justify-content: space-between;
+}
+
+.paginated-users {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.paginate {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.mode-text,
+.pages-count {
+  color: #8d939c;
+  font-size: 11px;
 }
 
 input {

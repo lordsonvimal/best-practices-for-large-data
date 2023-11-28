@@ -150,7 +150,7 @@ func GetUsers(table string) (Users, error) {
 	for rows.Next() {
 		user := User{}
 		// err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateOfBirth, &user.Phone, &user.Sex, &user.JobTitle, &user.CreatedAt, &user.UpdatedAt)
-		err := rows.Scan(&user.FirstName, &user.LastName, &user.Email, &user.JobTitle)
+		err := rows.Scan(&user.Email, &user.FirstName, &user.LastName, &user.JobTitle)
 
 		if err != nil {
 			return Users{}, err
