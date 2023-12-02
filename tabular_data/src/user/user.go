@@ -9,29 +9,16 @@ import (
 	"github.com/lordsonvimal/best-practices-for-large-data/tabular_data/db"
 )
 
-// type User struct {
-// 	Id          int       `json:"id"`
-// 	CreatedAt   time.Time `json:"created_at"`
-// 	UpdatedAt   time.Time `json:"updated_at"`
-// 	FirstName   string    `json:"first_name" csv:"First Name"` // .csv column headers
-// 	LastName    string    `json:"last_name" csv:"Last Name"`
-// 	Sex         string    `json:"gender" csv:"Sex"`
-// 	Email       string    `json:"email" csv:"Email"`
-// 	Phone       string    `json:"phone" csv:"Phone"`
-// 	DateOfBirth string    `json:"dob" csv:"Date of birth"`
-// 	JobTitle    string    `json:"job_title" csv:"Job Title"`
-// }
-
 type User struct {
-	Id          int       `json:"-"`
-	CreatedAt   time.Time `json:"-"`
-	UpdatedAt   time.Time `json:"-"`
+	Id          int       `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 	FirstName   string    `json:"first_name" csv:"First Name"` // .csv column headers
 	LastName    string    `json:"last_name" csv:"Last Name"`
-	Sex         string    `json:"-" csv:"Sex"`
+	Sex         string    `json:"gender" csv:"Sex"`
 	Email       string    `json:"email" csv:"Email"`
-	Phone       string    `json:"-" csv:"Phone"`
-	DateOfBirth string    `json:"-" csv:"Date of birth"`
+	Phone       string    `json:"phone" csv:"Phone"`
+	DateOfBirth string    `json:"dob" csv:"Date of birth"`
 	JobTitle    string    `json:"job_title" csv:"Job Title"`
 }
 
@@ -137,8 +124,7 @@ func Create100KUsers() {
 }
 
 func GetUsers(table string) (Users, error) {
-	// sqlStatement := "SELECT * FROM " + table
-	sqlStatement := "SELECT email, first_name, last_name, job_title FROM " + table
+	sqlStatement := "SELECT * FROM " + table
 	db := db.GetDB()
 	rows, err := db.Query(sqlStatement)
 	if err != nil {
@@ -149,8 +135,7 @@ func GetUsers(table string) (Users, error) {
 
 	for rows.Next() {
 		user := User{}
-		// err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateOfBirth, &user.Phone, &user.Sex, &user.JobTitle, &user.CreatedAt, &user.UpdatedAt)
-		err := rows.Scan(&user.Email, &user.FirstName, &user.LastName, &user.JobTitle)
+		err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateOfBirth, &user.Phone, &user.Sex, &user.JobTitle, &user.CreatedAt, &user.UpdatedAt)
 
 		if err != nil {
 			return Users{}, err

@@ -60,13 +60,13 @@ const App: Component = () => {
   const getUrl = (count: keyof typeof RECORDS_URL) => {
     const BASE_URL = RECORDS_URL[count];
     const modeToFetch = fetchMode();
-
+    return `${BASE_URL}_${FETCH_MODES[modeToFetch]}`;
   };
 
   const fetchRecords = async (count: keyof typeof RECORDS_URL, fetchMode: FetchMode) => {
     try {
       setIsLoading(true);
-      const response = await fetch(RECORDS_URL[count]);
+      const response = await fetch(getUrl(count));
       const responseJson: ResponseJson = await response.json();
       setPageNo(1);
       setPaginate(MODES[mode()] === "CLIENT_PAGINATE" || MODES[mode()] === "SERVER_PAGINATE");
