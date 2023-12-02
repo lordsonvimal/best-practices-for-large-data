@@ -3,6 +3,7 @@ import { render } from "solid-js/web";
 import "./index.scss";
 
 import App from "./App";
+import { UserProvider } from "./UserContext";
 
 const root = document.getElementById("root");
 
@@ -12,4 +13,4 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-render(() => <App />, root!);
+render(() => <UserProvider><App /></UserProvider>, root!);

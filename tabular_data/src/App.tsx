@@ -1,10 +1,11 @@
 import "./App.scss";
 
-import { Accessor, Component, JSX, createEffect, createSignal, Show, onCleanup, Setter, Switch, Match, createMemo } from "solid-js";
+import { Component, JSX, createEffect, createSignal, Show, onCleanup, Switch, Match } from "solid-js";
 import { VirtualList } from "./VirtualList";
 import { Users } from "./Users";
 import { UserCard } from "./UserCard";
 import { Paginate } from "./Paginate";
+import { useUser } from "./UserContext";
 
 export interface UserInArray extends Array<string> {
   0: string; // name
@@ -44,165 +45,13 @@ const COMPARE_MODES = ["COMPARE_DEFAULT", "COMPARE_WEB_WORKER"] as const;
 
 const comparisonWorker = new Worker(new URL("./comparisonWorker.ts", import.meta.url));
 
-type Option = {
-  pageNo?: number,
-  totalRecords?: number,
-  paginate?: boolean
-}
-
-class UserObject {
-  searchTerm: Accessor<string>;
-  setSearchTerm: Setter<string>;
-  setUsers: Setter<UserInObject[]>;
-  users: Accessor<UserInObject[]>;
-  paginate: Accessor<boolean>;
-  setPaginate: Setter<boolean>;
-  pageNo: Accessor<number>;
-  setPageNo: Setter<number>;
-  totalRecords: Accessor<number>;
-  setTotalRecords: Setter<number>;
-  pages: () => number;
-  paginatedUsers: () => UserInObject[];
-  filteredUsers: () => UserInObject[];
-
-  constructor(people: UserInObject[], options: Option = {}) {
-    const [searchTerm, setSearchTerm] = createSignal("");
-    const [users, setUsers] = createSignal(people);
-    const [paginate, setPaginate] = createSignal(options.paginate || false);
-    const [pageNo, setPageNo] = createSignal(options.pageNo || 1);
-    const [totalRecords, setTotalRecords] = createSignal(options.totalRecords || 0);
-    this.searchTerm = searchTerm;
-    this.setSearchTerm = setSearchTerm;
-    this.users = users;
-    this.setUsers = setUsers;
-    this.paginate = paginate;
-    this.setPaginate = setPaginate;
-    this.pageNo = pageNo;
-    this.setPageNo = setPageNo;
-    this.totalRecords = totalRecords;
-    this.setTotalRecords = setTotalRecords;
-    this.filteredUsers = createMemo(() => {
-      const lowerCaseSearchTerm = searchTerm().toLowerCase();
-      return users().filter((user) => `${user.first_name} ${user.last_name}`.toLowerCase().indexOf(lowerCaseSearchTerm) === 0);
-    });
-
-    this.pages = () => {
-      const totalUsers = this.filteredUsers().length;
-      if (totalUsers === 0) return 1;
-      return Math.ceil(totalUsers / PAGE_SIZE);
-    };
-  
-    this.paginatedUsers = createMemo(() => {
-      const startIndex = (pageNo() - 1) * PAGE_SIZE;
-      const endIndex = PAGE_SIZE * pageNo();
-      
-      return this.filteredUsers().slice(startIndex, endIndex);
-    });
-  }
-
-  getUser = (index: number) => {
-    const user = this.paginate() ? this.paginatedUsers()[index] : this.filteredUsers()[index];
-    return user;
-  }
-
-  getUserName = (index: number) => {
-    const user = this.getUser(index);
-    return `${user.first_name} ${user.last_name}`;
-  }
-  
-  getEmail = (index: number) => {
-    const user = this.getUser(index);
-    return user.email;
-  }
-  
-  getTitle = (index: number) => {
-    const user = this.getUser(index);
-    return user.job_title;
-  }
-
-  filter = (): UserInObject[] => {
-    const lowerCaseSearchTerm = this.searchTerm().toLowerCase();
-    return this.users().filter((_user, index) => this.getUserName(index).toLowerCase().indexOf(lowerCaseSearchTerm) === 0);
-  }
-}
-
-class UserArray {
-  searchTerm: Accessor<string>;
-  setSearchTerm: Setter<string>;
-  setUsers: Setter<UserInArray[]>;
-  users: Accessor<UserInArray[]>;
-  pageNo: Accessor<number>;
-  paginate: Accessor<boolean>;
-  setPaginate: Setter<boolean>;
-  setPageNo: Setter<number>;
-  totalRecords: Accessor<number>;
-  setTotalRecords: Setter<number>;
-
-  constructor(people: UserInArray[], options: Option) {
-    const [searchTerm, setSearchTerm] = createSignal("");
-    const [users, setUsers] = createSignal(people);
-    const [paginate, setPaginate] = createSignal(options.paginate || false);
-    const [pageNo, setPageNo] = createSignal(options.pageNo || 1);
-    const [totalRecords, setTotalRecords] = createSignal(options.totalRecords || 0);
-    this.searchTerm = searchTerm;
-    this.setSearchTerm = setSearchTerm;
-    this.users = users;
-    this.setUsers = setUsers;
-    this.paginate = paginate;
-    this.setPaginate = setPaginate;
-    this.pageNo = pageNo;
-    this.setPageNo = setPageNo;
-    this.totalRecords = totalRecords;
-    this.setTotalRecords = setTotalRecords;
-  }
-
-  getUser = (index: number) => {
-    const user = this.paginate() ? this.paginatedUsers()[index] : this.filteredUsers()[index];
-    return user;
-  }
-
-  getUserName(index: number) {
-    return this.filteredUsers()[index][0];
-  }
-
-  getEmail(index: number) {
-    return this.filteredUsers()[index][1];
-  }
-
-  getTitle(index: number) {
-    return this.filteredUsers()[index][2];
-  }
-
-  filter() {
-    const lowerCaseSearchTerm = this.searchTerm().toLowerCase();
-    return this.users().filter(user => user[0].indexOf(lowerCaseSearchTerm) === 0);
-  }
-
-  filteredUsers = () => {
-    return createMemo(() => this.filter())();
-  };
-
-  pages = () => {
-    const totalUsers = this.filteredUsers().length;
-    if (totalUsers === 0) return 1;
-    return Math.ceil(totalUsers / PAGE_SIZE);
-  };
-
-  paginatedUsers = () => {
-    const startIndex = (this.pageNo() - 1) * PAGE_SIZE;
-    const endIndex = PAGE_SIZE * this.pageNo();
-    return this.filteredUsers().slice(startIndex, endIndex);
-  };
-}
-
-export type Container = UserArray | UserObject;
-
 const App: Component = () => {
   const [fetchMode, setFetchMode] = createSignal<FetchMode>(0);
-  const [container, setContainer] = createSignal<Container>(new UserObject([]));
   const [context, setContext] = createSignal<keyof typeof RECORDS_URL>("1K");
   const [isLoading, setIsLoading] = createSignal(false);
   const [mode, setMode] = createSignal<Mode>(0);
+
+  const { filteredUsers, getUsers, pageNo, pages, searchTerm, setPageNo, setPaginate, setSearchTerm, setTotalRecords, setUsers } = useUser();
 
   onCleanup(() => {
     comparisonWorker.terminate();
@@ -219,16 +68,11 @@ const App: Component = () => {
       setIsLoading(true);
       const response = await fetch(RECORDS_URL[count]);
       const responseJson: ResponseJson = await response.json();
-
-      const isArray = Array.isArray(responseJson.users[0]);
-      const options = {
-        totalRecords: responseJson.users.length,
-        pageNo: 1,
-        paginate: MODES[mode()] === "CLIENT_PAGINATE" || MODES[mode()] === "SERVER_PAGINATE"
-      };
-      const newContainer = isArray ? new UserArray(responseJson.users as UserInArray[], options) : new UserObject(responseJson.users as UserInObject[], options);      
-      setContainer(newContainer);
+      setPageNo(1);
+      setPaginate(MODES[mode()] === "CLIENT_PAGINATE" || MODES[mode()] === "SERVER_PAGINATE");
+      setTotalRecords(responseJson.users.length); // Update it for server side
       setIsLoading(false);
+      setUsers(responseJson.users as never[]);
       // comparisonWorker.postMessage({ event: "update", users: responseJson.users });
     } catch(e) {}
   };
@@ -239,7 +83,7 @@ const App: Component = () => {
 
   createEffect(() => {
     const currentMode = mode();
-    container().setPaginate(MODES[currentMode] === "CLIENT_PAGINATE" || MODES[currentMode] === "SERVER_PAGINATE");
+    setPaginate(MODES[currentMode] === "CLIENT_PAGINATE" || MODES[currentMode] === "SERVER_PAGINATE");
   });
 
   comparisonWorker.onmessage = (e) => {
@@ -296,8 +140,8 @@ const App: Component = () => {
   };
 
   const searchUsers: JSX.EventHandler<HTMLInputElement, InputEvent> = (e) => {
-    container().setSearchTerm(e.currentTarget.value);
-    container().setPageNo(1);
+    setSearchTerm(e.currentTarget.value);
+    setPageNo(1);
   }
 
   return (
@@ -305,27 +149,27 @@ const App: Component = () => {
       <main>
         <h2>Users</h2>
         <div class="list-toolbar">
-          <input autofocus onInput={searchUsers} placeholder="Search users..." value={container().searchTerm()} />
+          <input autofocus onInput={searchUsers} placeholder="Search users..." value={searchTerm()} />
           <Show when={MODES[mode()] === "CLIENT_PAGINATE" || MODES[mode()] === "SERVER_PAGINATE"}>
-            <Paginate onChange={(pageNo: number) => container().setPageNo(pageNo)} pageNo={container().pageNo()} pages={container().pages()} />
+            <Paginate onChange={(pageNo: number) => setPageNo(pageNo)} pageNo={pageNo()} pages={pages()} />
           </Show>
           <Show when={!isLoading()} fallback={<div><b>Loading...</b></div>}>
-            <span>Showing <b>{container().filteredUsers().length}</b> users</span>
+            <span>Showing <b>{filteredUsers().length}</b> users</span>
           </Show>
         </div>
         <Show when={!isLoading()} fallback={<div />}>
           <Switch>
             <Match when={MODES[mode()] === "CLIENT_DEFAULT"}>
-              <Users container={container} renderer={(container: Accessor<Container>, index: Accessor<number>) => <UserCard container={container} index={index} onCompare={getUsersWithSameJob} />} />
+              <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
             <Match when={MODES[mode()] === "CLIENT_VIRTUALIZE"}>
-              <VirtualList container={container} renderer={(container: Accessor<Container>, index: Accessor<number>) => <UserCard container={container} index={index} onCompare={getUsersWithSameJob} />} />
+              <VirtualList users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
             <Match when={MODES[mode()] === "CLIENT_PAGINATE"}>
-              <Users container={container} renderer={(container: Accessor<Container>, index: Accessor<number>) => <UserCard container={container} index={index} onCompare={getUsersWithSameJob} />} />
+              <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
             <Match when={MODES[mode()] === "SERVER_PAGINATE"}>
-              <Users container={container} renderer={(container: Accessor<Container>, index: Accessor<number>) => <UserCard container={container} index={index} onCompare={getUsersWithSameJob} />} />
+              <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
           </Switch>
         </Show>
