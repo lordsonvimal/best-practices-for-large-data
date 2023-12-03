@@ -1,29 +1,15 @@
 import "./App.scss";
 
-import { Component, JSX, createEffect, createSignal, Show, onCleanup, Switch, Match } from "solid-js";
+import { Component, JSX, createEffect, createSignal, Show, onCleanup, Switch, Match, createMemo } from "solid-js";
 import { VirtualList } from "./VirtualList";
 import { Users } from "./Users";
 import { UserCard } from "./UserCard";
 import { Paginate } from "./Paginate";
-import { useUser } from "./UserContext";
-
-export interface UserInArray extends Array<string> {
-  0: string; // name
-  1: string; // email
-  2: string; // job_title
-};
-
-export interface UserInObject {
-  email: string;
-  job_title: string;
-  first_name: string;
-  last_name: string;
-};
-
-export type User = UserInObject | UserInArray;
+import { User, useUser } from "./UserContext";
 
 type ResponseJson = {
-  users: User[]
+  users: User[],
+  total_records: number
 };
 
 const RECORDS_URL = {
@@ -35,11 +21,20 @@ const RECORDS_URL = {
 
 export const PAGE_SIZE = 50;
 
-const MODES = ["CLIENT_DEFAULT", "CLIENT_VIRTUALIZE", "CLIENT_PAGINATE", "SERVER_PAGINATE"] as const;
-type Mode = 0 | 1 | 2 | 3;
+const MODES = ["DEFAULT", "VIRTUALIZE", "PAGINATE"] as const;
+type Mode = 0 | 1 | 2;
 
-const FETCH_MODES = ["default", "skinny", "array"] as const;
-type FetchMode = 0 | 1 | 2;
+const FETCH_MODES = ["default", "skinny", "array", "object_optimized", "array_optimized", "server_optimized"] as const;
+type FetchMode = 0 | 1 | 2 | 3 | 4 | 5;
+
+const FETCH_MODES_DISPLAY = {
+  0: "DE",
+  1: "SK",
+  2: "AR",
+  3: "OS",
+  4: "AS",
+  5: "SO"
+};
 
 const COMPARE_MODES = ["COMPARE_DEFAULT", "COMPARE_WEB_WORKER"] as const;
 
@@ -51,39 +46,100 @@ const App: Component = () => {
   const [isLoading, setIsLoading] = createSignal(false);
   const [mode, setMode] = createSignal<Mode>(0);
 
-  const { filteredUsers, getUsers, pageNo, pages, searchTerm, setPageNo, setPaginate, setSearchTerm, setTotalRecords, setUsers } = useUser();
+  const {
+    getTotalRecords,
+    getUsers,
+    lastIdOnPage,
+    pageNo,
+    pages,
+    searchTerm,
+    setIsServer,
+    setLastIdOnPage,
+    setPageNo,
+    setPaginate,
+    setSearchTerm,
+    setTotalRecords,
+    setUsers,
+    userInfo
+  } = useUser();
 
   onCleanup(() => {
     comparisonWorker.terminate();
   });
 
+  const isServerPaginate = createMemo(() => MODES[mode()] === "PAGINATE" && FETCH_MODES[fetchMode()] === "server_optimized");
+  const setLastId = createMemo(() => {
+    const lastIds = lastIdOnPage();
+    const page = pageNo();
+    const info = userInfo();
+    return (users: never[]) => {
+      setLastIdOnPage({
+        ...lastIds,
+        [page]: info.getId(users[users.length - 1] as never)
+      });
+    }
+  });
+
   const getUrl = (count: keyof typeof RECORDS_URL) => {
     const BASE_URL = RECORDS_URL[count];
     const modeToFetch = fetchMode();
-    return `${BASE_URL}_${FETCH_MODES[modeToFetch]}`;
+    const params = isServerPaginate() ? `?search=${searchTerm().toLowerCase()}&id=${lastIdOnPage()[pageNo() - 1] || ""}` : "";
+    return `${BASE_URL}_${FETCH_MODES[modeToFetch]}${params}`;
   };
 
-  const fetchRecords = async (count: keyof typeof RECORDS_URL, fetchMode: FetchMode) => {
+  const fetchRecords = async (count: keyof typeof RECORDS_URL) => {
     try {
       setIsLoading(true);
       const response = await fetch(getUrl(count));
       const responseJson: ResponseJson = await response.json();
-      setPageNo(1);
-      setPaginate(MODES[mode()] === "CLIENT_PAGINATE" || MODES[mode()] === "SERVER_PAGINATE");
-      setTotalRecords(responseJson.users.length); // Update it for server side
+      setTotalRecords(isServerPaginate() ? responseJson.total_records : responseJson.users.length); // Update it for server side
       setIsLoading(false);
-      setUsers(responseJson.users as never[]);
+      setUsers(responseJson.users as never[] || []);
+      setLastId()(responseJson.users as never[]);
+      setIsServer(isServerPaginate());
       // comparisonWorker.postMessage({ event: "update", users: responseJson.users });
     } catch(e) {}
   };
 
-  createEffect(() => {
-    fetchRecords(context(), fetchMode());
+  const memoizedFetch = createMemo(() => {
+    return {
+      context: context(),
+      fetchMode: fetchMode()
+    };
   });
 
-  createEffect(() => {
+  const memoizedServerFetch = createMemo(() => {
+    return {
+      context: context(),
+      isServerPaginate: isServerPaginate(),
+      pageNo: pageNo(),
+      searchTerm: searchTerm()
+    }
+  });
+
+  createEffect((prevServerFetch) => {
+    const serverFetch = memoizedServerFetch();
+    if (!serverFetch.isServerPaginate) return;
+    if (prevServerFetch === serverFetch) return;
+    fetchRecords(serverFetch.context);
+    return serverFetch;
+  });
+  
+  createEffect((prevFetch) => {
+    if (isServerPaginate()) return;
+    const fetch = memoizedFetch();
+    if (prevFetch === fetch) return;
+    fetchRecords(fetch.context as keyof typeof RECORDS_URL);
+    return fetch;
+  });
+
+  createEffect((prevMode) => {
     const currentMode = mode();
-    setPaginate(MODES[currentMode] === "CLIENT_PAGINATE" || MODES[currentMode] === "SERVER_PAGINATE");
+    if (currentMode === prevMode) return;
+    setPageNo(1);
+    setPaginate(MODES[currentMode] === "PAGINATE");
+    setLastIdOnPage({});
+    return currentMode;
   });
 
   comparisonWorker.onmessage = (e) => {
@@ -142,7 +198,12 @@ const App: Component = () => {
   const searchUsers: JSX.EventHandler<HTMLInputElement, InputEvent> = (e) => {
     setSearchTerm(e.currentTarget.value);
     setPageNo(1);
+    setLastIdOnPage({});
   }
+
+  const onChangePage = (num: number) => {
+    setPageNo(num);
+  };
 
   return (
     <>
@@ -150,25 +211,22 @@ const App: Component = () => {
         <h2>Users</h2>
         <div class="list-toolbar">
           <input autofocus onInput={searchUsers} placeholder="Search users..." value={searchTerm()} />
-          <Show when={MODES[mode()] === "CLIENT_PAGINATE" || MODES[mode()] === "SERVER_PAGINATE"}>
-            <Paginate onChange={(pageNo: number) => setPageNo(pageNo)} pageNo={pageNo()} pages={pages()} />
+          <Show when={MODES[mode()] === "PAGINATE"}>
+            <Paginate onChange={onChangePage} pageNo={pageNo()} pages={pages()} />
           </Show>
           <Show when={!isLoading()} fallback={<div><b>Loading...</b></div>}>
-            <span>Showing <b>{filteredUsers().length}</b> users</span>
+            <span>Showing <b>{getTotalRecords()}</b> users</span>
           </Show>
         </div>
         <Show when={!isLoading()} fallback={<div />}>
           <Switch>
-            <Match when={MODES[mode()] === "CLIENT_DEFAULT"}>
+            <Match when={MODES[mode()] === "DEFAULT"}>
               <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
-            <Match when={MODES[mode()] === "CLIENT_VIRTUALIZE"}>
+            <Match when={MODES[mode()] === "VIRTUALIZE"}>
               <VirtualList users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
-            <Match when={MODES[mode()] === "CLIENT_PAGINATE"}>
-              <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
-            </Match>
-            <Match when={MODES[mode()] === "SERVER_PAGINATE"}>
+            <Match when={MODES[mode()] === "PAGINATE"}>
               <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
           </Switch>
@@ -179,7 +237,7 @@ const App: Component = () => {
           <button classList={{ "btn": true, "btn-selected": context() === "100K" }} onClick={[changeContext, "100K"]}>100K records</button>
           <button classList={{ "btn": true, "btn-selected": context() === "2M" }} onClick={[changeContext, "2M"]}>2M records</button>
           <button classList={{ "btn": true }} disabled={fetchMode() === 0} onClick={goToPrevFetchMode} style={{ "margin-left": "auto" }}>{"<"}</button>
-          <b class="mode-text">{FETCH_MODES[fetchMode()][0]}</b>
+          <b class="mode-text">{FETCH_MODES_DISPLAY[fetchMode()]}</b>
           <button classList={{ "btn": true }} disabled={fetchMode() === FETCH_MODES.length - 1} onClick={goToNextFetchMode}>{">"}</button>
           <button classList={{ "btn": true }} disabled={mode() === 0} onClick={goToPrevMode}>{"<"}</button>
           <i class="mode-text">{MODES[mode()]}</i>

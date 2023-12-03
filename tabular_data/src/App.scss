@@ -93,6 +93,10 @@ main {
   flex: 1;
 }
 
+.user-name {
+  text-transform: capitalize;
+}
+
 .user-email {
   color: #747779;
   font-size: 12px;
