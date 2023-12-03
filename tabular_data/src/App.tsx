@@ -1,11 +1,12 @@
 import "./App.scss";
 
-import { Component, JSX, createEffect, createSignal, Show, onCleanup, Switch, Match, createMemo } from "solid-js";
+import { Component, JSX, createEffect, createSignal, Show, onCleanup, Switch, Match, createMemo, batch } from "solid-js";
 import { VirtualList } from "./VirtualList";
 import { Users } from "./Users";
 import { UserCard } from "./UserCard";
 import { Paginate } from "./Paginate";
 import { User, useUser } from "./UserContext";
+import { debounce, throttle } from "@solid-primitives/scheduled";
 
 type ResponseJson = {
   users: User[],
@@ -46,6 +47,10 @@ const App: Component = () => {
   const [isLoading, setIsLoading] = createSignal(false);
   const [mode, setMode] = createSignal<Mode>(0);
 
+  // createEffect(() => {
+  //   console.log(isLoading());
+  // });
+
   const {
     getTotalRecords,
     getUsers,
@@ -68,6 +73,7 @@ const App: Component = () => {
   });
 
   const isServerPaginate = createMemo(() => MODES[mode()] === "PAGINATE" && FETCH_MODES[fetchMode()] === "server_optimized");
+  
   const setLastId = createMemo(() => {
     const lastIds = lastIdOnPage();
     const page = pageNo();
@@ -75,7 +81,7 @@ const App: Component = () => {
     return (users: never[]) => {
       setLastIdOnPage({
         ...lastIds,
-        [page]: info.getId(users[users.length - 1] as never)
+        [page]: users.length ? info.getId(users[users.length - 1] as never) : 0
       });
     }
   });
@@ -87,18 +93,27 @@ const App: Component = () => {
     return `${BASE_URL}_${FETCH_MODES[modeToFetch]}${params}`;
   };
 
+  const debounceLoading = debounce((val: boolean) => {
+    setIsLoading(val);
+  }, 300);
+
   const fetchRecords = async (count: keyof typeof RECORDS_URL) => {
     try {
-      setIsLoading(true);
+      debounceLoading(true);
       const response = await fetch(getUrl(count));
       const responseJson: ResponseJson = await response.json();
-      setTotalRecords(isServerPaginate() ? responseJson.total_records : responseJson.users.length); // Update it for server side
-      setIsLoading(false);
-      setUsers(responseJson.users as never[] || []);
-      setLastId()(responseJson.users as never[]);
-      setIsServer(isServerPaginate());
+      batch(() => {
+        debounceLoading(false);
+        setTotalRecords(isServerPaginate() ? responseJson.total_records : responseJson.users.length); // Update it for server side
+        setUsers(responseJson.users as never[] || []);
+        setLastId()(responseJson.users as never[] || []);
+        setIsServer(isServerPaginate());
+      });
       // comparisonWorker.postMessage({ event: "update", users: responseJson.users });
-    } catch(e) {}
+    } catch(e) {
+      console.log(e);
+      
+    }
   };
 
   const memoizedFetch = createMemo(() => {
@@ -112,10 +127,13 @@ const App: Component = () => {
     return {
       context: context(),
       isServerPaginate: isServerPaginate(),
-      pageNo: pageNo(),
-      searchTerm: searchTerm()
+      pageNo: pageNo()
     }
   });
+
+  const debouncedFetchRecords = debounce((count: keyof typeof RECORDS_URL) => {
+    fetchRecords(count);
+  }, 200);
 
   createEffect((prevServerFetch) => {
     const serverFetch = memoizedServerFetch();
@@ -124,6 +142,14 @@ const App: Component = () => {
     fetchRecords(serverFetch.context);
     return serverFetch;
   });
+  
+  createEffect((prevSearch) => {
+    const serverFetch = memoizedServerFetch();
+    if (!serverFetch.isServerPaginate) return searchTerm();
+    if (prevSearch === searchTerm()) return searchTerm();
+    debouncedFetchRecords(serverFetch.context);
+    return searchTerm();
+  })
   
   createEffect((prevFetch) => {
     if (isServerPaginate()) return;
@@ -136,11 +162,14 @@ const App: Component = () => {
   createEffect((prevMode) => {
     const currentMode = mode();
     if (currentMode === prevMode) return;
-    setPageNo(1);
-    setPaginate(MODES[currentMode] === "PAGINATE");
     setLastIdOnPage({});
     return currentMode;
   });
+
+  const resetPagination = (currentMode: Mode) => {
+    setPageNo(1);
+    setPaginate(MODES[currentMode] === "PAGINATE");
+  }
 
   comparisonWorker.onmessage = (e) => {
     console.log(e.data.users);
@@ -173,7 +202,10 @@ const App: Component = () => {
     }
 
     const newMode = currentMode + 1 as Mode;
-    setMode(newMode);
+    batch(() => {
+      resetPagination(newMode);
+      setMode(newMode);
+    });
   };
   
   const goToPrevMode = () => {
@@ -183,7 +215,10 @@ const App: Component = () => {
     }
     
     const newMode = currentMode - 1 as Mode;
-    setMode(newMode);
+    batch(() => {
+      resetPagination(newMode);
+      setMode(newMode);
+    });
   };
 
   const getUsersWithSameJob = (user: User) => {
@@ -196,9 +231,11 @@ const App: Component = () => {
   };
 
   const searchUsers: JSX.EventHandler<HTMLInputElement, InputEvent> = (e) => {
-    setSearchTerm(e.currentTarget.value);
-    setPageNo(1);
-    setLastIdOnPage({});
+    batch(() => {
+      setSearchTerm(e.currentTarget.value);
+      setPageNo(1);
+      setLastIdOnPage({});
+    });
   }
 
   const onChangePage = (num: number) => {
@@ -224,7 +261,7 @@ const App: Component = () => {
               <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
             </Match>
             <Match when={MODES[mode()] === "VIRTUALIZE"}>
-              <VirtualList users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />
+              <VirtualList renderer={(user: never) => {return <UserCard user={user} onCompare={getUsersWithSameJob} />}} />
             </Match>
             <Match when={MODES[mode()] === "PAGINATE"}>
               <Users users={getUsers() as never[]} renderer={(user: never) => <UserCard user={user} onCompare={getUsersWithSameJob} />} />

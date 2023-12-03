@@ -34,6 +34,13 @@ const UserContext = createContext<Context>();
 
 const PAGE_SIZE = 50;
 
+const USER_INFO = {
+  arr: new UserArray(),
+  arrSkinny: new UserArraySkinny(),
+  obj: new UserObject(),
+  objSkinny: new UserObjectSkinny()
+}
+
 export function UserProvider(props: Props) {
   const [searchTerm, setSearchTerm] = createSignal("");
   const [users, setUsers] = createSignal([]);
@@ -55,16 +62,17 @@ export function UserProvider(props: Props) {
     const isArray = Array.isArray(sampleUser);
 
     if (isArray) {
-      if (sampleUser[3]) return new UserArray();
-      return new UserArraySkinny();
+      if (sampleUser[4]) return USER_INFO.arr;
+      return USER_INFO.arrSkinny;
     }
 
-    if ((sampleUser as UserInObjectSkinny).name) return new UserObjectSkinny();
-    return new UserObject();
+    if ((sampleUser as UserInObjectSkinny).name) return USER_INFO.objSkinny;
+    return USER_INFO.obj;
   });
 
   const filteredUsers = createMemo<User[]>(() => {
     if (isServer()) return users();
+    if (!searchTerm()) return users();
     return users().filter(userInfo().filter(searchTerm()));
   });
 

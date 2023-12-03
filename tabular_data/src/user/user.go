@@ -135,7 +135,7 @@ func GetUsers(table string) (Users, error) {
 
 	for rows.Next() {
 		user := User{}
-		err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateOfBirth, &user.Phone, &user.Sex, &user.JobTitle, &user.CreatedAt, &user.UpdatedAt)
+		err := rows.Scan(&user.Id, &user.FirstName, &user.LastName, &user.Sex, &user.Email, &user.Phone, &user.DateOfBirth, &user.JobTitle, &user.CreatedAt, &user.UpdatedAt)
 
 		if err != nil {
 			return Users{}, err
