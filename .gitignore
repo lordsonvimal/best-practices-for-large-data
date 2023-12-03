@@ -3,3 +3,4 @@ node_modules/
 *.csv
 .DS_STORE
 dist/
+./tabular_data/tabular_data
